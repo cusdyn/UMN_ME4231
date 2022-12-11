@@ -11,6 +11,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SeriesSin", "SeriesSin\Seri
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RCcircuitResponse", "RCcircuitResponse\RCcircuitResponse.vcxproj", "{4ADE8377-D628-4A59-8326-1DED4F1CB23E}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LoopSortModular", "LoopSortModular\LoopSortModular.vcxproj", "{DF9880D0-F0FC-4BBD-A73B-267E24A47456}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -51,6 +53,14 @@ Global
 		{4ADE8377-D628-4A59-8326-1DED4F1CB23E}.Release|x64.Build.0 = Release|x64
 		{4ADE8377-D628-4A59-8326-1DED4F1CB23E}.Release|x86.ActiveCfg = Release|Win32
 		{4ADE8377-D628-4A59-8326-1DED4F1CB23E}.Release|x86.Build.0 = Release|Win32
+		{DF9880D0-F0FC-4BBD-A73B-267E24A47456}.Debug|x64.ActiveCfg = Debug|x64
+		{DF9880D0-F0FC-4BBD-A73B-267E24A47456}.Debug|x64.Build.0 = Debug|x64
+		{DF9880D0-F0FC-4BBD-A73B-267E24A47456}.Debug|x86.ActiveCfg = Debug|Win32
+		{DF9880D0-F0FC-4BBD-A73B-267E24A47456}.Debug|x86.Build.0 = Debug|Win32
+		{DF9880D0-F0FC-4BBD-A73B-267E24A47456}.Release|x64.ActiveCfg = Release|x64
+		{DF9880D0-F0FC-4BBD-A73B-267E24A47456}.Release|x64.Build.0 = Release|x64
+		{DF9880D0-F0FC-4BBD-A73B-267E24A47456}.Release|x86.ActiveCfg = Release|Win32
+		{DF9880D0-F0FC-4BBD-A73B-267E24A47456}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
