@@ -233,6 +233,25 @@ Main:
 	bsf IPR1, RCIP      ; set recieve priority to high
 	bsf INTCON, GIE     ; global interrupt enable
 
+
+prompt:
+cret:
+	MOVLW 0x0D
+	BTFSS TXSTA,TRMT
+	goto cret
+	MOVWF TXREG
+lfeed:
+	MOVLW 0x0A
+	BTFSS TXSTA,TRMT
+	goto lfeed
+	MOVWF TXREG
+psym:
+	MOVLW 0x3E
+	BTFSS TXSTA,TRMT
+	goto psym
+	MOVWF TXREG
+
+
 loop:
 
 
@@ -258,11 +277,8 @@ loop:
 ;	MOVWF EXAMPLE	
 ;	MOVF EXAMPLE,0
 
-; display prompt
-;	BTFSC TXSTA,TRMT
-;	MOVWF TXREG
 
-	goto loop
+	goto prompt
 ;******************************************************************************
 ;End of program
 
