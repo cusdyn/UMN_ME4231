@@ -23,25 +23,26 @@
 ;                                                                             *
 ;******************************************************************************
 
-	LIST P=18F2520		;directive to define processor
-	#include <P18F25K20.INC>	;processor specific variable definitions
+LIST P=18F2520		;directive to define processor
+#include <P18F25K20.INC>	;processor specific variable definitions
 
-	EXTERN prompt_r
+EXTERN prompt_r
+EXTERN cmd_proc_r
+
 ;******************************************************************************
 ;Configuration bits
 ;Microchip has changed the format for defining the configuration bits, please 
 ;see the .inc file for futher details on notation.  Below are a few examples.
 
-	CONFIG	FOSC  = HS    ; high-speed occillator   
-	CONFIG  FCMEN = OFF   ; failsafe clock monitior disabled
-	CONFIG  IESO  = OFF   ; oscilator switchover mode disabled
-	CONFIG  PWRT  = ON    ; power-up timer enable
-	CONFIG  BOREN = OFF   ; brown-out reset disabled
-	CONFIG  WDTEN = OFF   ; watchdog timer enable controlled by SWDTEN in WDTCON
-	CONFIG  MCLRE = ON    ; MCLRE pin enabled (master clear reset pin)
-
-	CONFIG  DEBUG = OFF
-;	CONFIG  LVP   = ON       
+CONFIG	FOSC  = HS    ; high-speed occillator   
+CONFIG  FCMEN = OFF   ; failsafe clock monitior disabled
+CONFIG  IESO  = OFF   ; oscilator switchover mode disabled
+CONFIG  PWRT  = ON    ; power-up timer enable
+CONFIG  BOREN = OFF   ; brown-out reset disabled
+CONFIG  WDTEN = OFF   ; watchdog timer enable controlled by SWDTEN in WDTCON
+CONFIG  MCLRE = ON    ; MCLRE pin enabled (master clear reset pin)
+CONFIG  DEBUG = OFF
+;CONFIG  LVP   = ON       
 
 ;******************************************************************************
 ;Variable definitions
@@ -49,7 +50,7 @@
 ; More variables may be needed to store other special function registers used
 ; in the interrupt routines.
 
-	udata
+udata
 	rxdata res 1
 	rxflag res 1
 	WREG_TEMP res 1	  ;variable used for context saving 
@@ -59,19 +60,14 @@
 ;******************************************************************************
 ;EEPROM data
 ; Data to be programmed into the Data EEPROM is defined here
-
 ;	ORG	0xf00000
-
 ;	DE	"Test Data",0,1,2,3,4,5
 
 ;******************************************************************************
 ;Reset vector
 ; This code will start executing when a reset occurs.
 
-	ORG	0x0000
-		
-;		rxflag EQU 0x00
-
+ORG	0x0000
 goto	Main		;go to start of main code
 
 ;******************************************************************************
@@ -79,28 +75,26 @@ goto	Main		;go to start of main code
 ; This code will start executing when a high priority interrupt occurs or
 ; when any interrupt occurs if interrupt priorities are not enabled.
 
-		ORG	0x0008
-
-		bra	HighInt		;go to high priority interrupt routine
+ORG	0x0008
+bra	HighInt		;go to high priority interrupt routine
 
 ;******************************************************************************
 ;Low priority interrupt vector and routine
 ; This code will start executing when a low priority interrupt occurs.
 ; This code can be removed if low priority interrupts are not used.
 
-		ORG	0x0018
+ORG	0x0018
 
-		movff	STATUS,STATUS_TEMP	;save STATUS register
-		movff	WREG,WREG_TEMP		;save working register
-		movff	BSR,BSR_TEMP		;save BSR register
+	movff	STATUS,STATUS_TEMP	;save STATUS register
+	movff	WREG,WREG_TEMP		;save working register
+	movff	BSR,BSR_TEMP		;save BSR register
 
 ;	*** low priority interrupt code goes here ***
 
-
-		movff	BSR_TEMP,BSR		;restore BSR register
-		movff	WREG_TEMP,WREG		;restore working register
-		movff	STATUS_TEMP,STATUS	;restore STATUS register
-		retfie
+	movff	BSR_TEMP,BSR		;restore BSR register
+	movff	WREG_TEMP,WREG		;restore working register
+	movff	STATUS_TEMP,STATUS	;restore STATUS register
+	retfie
 
 ;******************************************************************************
 ;High priority interrupt routine
@@ -111,33 +105,33 @@ HighInt:
 
 ;	*** high priority interrupt code goes here ***
 
-	MOVLW 0x00          ; initialize our bit toggle field
+	movlw 0x00          ; initialize our bit toggle field
 
 	; TIMER0 interrupt
-	BTFSS INTCON,TMR0IF ; TIMER0 flag check. skip next instruction if clear
+	btfss INTCON,TMR0IF ; TIMER0 flag check. skip next instruction if clear
     goto rxisr
 
-	MOVLW 0x01
-	MOVWF PORTA         ; toggling our test pins
-	CLRF PORTA
+	movlw 0x01
+	movwf PORTA         ; toggling our test pins
+	clrf PORTA
 
-	BCF   INTCON,TMR0IF ; clear the flag
+	bcf   INTCON,TMR0IF ; clear the flag
 	
 rxisr:
 	; USART receive interrupt
-	BTFSS PIR1,RCIF     ; check for receive interrupt
+	btfss PIR1,RCIF     ; check for receive interrupt
 	goto isrexit
 
-	MOVLW 0x02
-	MOVWF PORTA         ; toggling our test pins
-	CLRF PORTA
+	movlw 0x02
+	movwf PORTA         ; toggling our test pins
+	clrf  PORTA
 
 	; check for framing error
 	
 	movlw 0x08
 	btfsc RCSTA,FERR
-	MOVWF PORTA         ; toggling our test pins
-	CLRF PORTA
+	movwf PORTA         ; toggling our test pins
+	clrf  PORTA
 	
 
 	movf RCREG,W
@@ -146,14 +140,7 @@ rxisr:
 
 	bsf  rxflag,0x01
 
-
-;	BCF  PIR1,RCIF	    ; clear the flag
-
-
-
 isrexit:
-
-
 	retfie	FAST
 
 ;******************************************************************************
@@ -162,42 +149,34 @@ isrexit:
 
 Main:
 
-;	clock config
+	;	clock config
 	bsf OSCCON,IRCF0
 	bsf OSCCON,IRCF1
 	bsf OSCCON,IRCF2
 
-;	bsf OSCTUNE,TUN0
-
-; Timer 0
+	; Timer 0
 	bsf T0CON,T08BIT
 	bcf T0CON,T0CS    ; clock source internal
 	bsf T0CON,PSA     ; disable prescaler
 
-;	*** main code goes here ***
-	CLRF PORTA ; Initialize PORTA by
-; clearing output
-; data latches
-	CLRF LATA ; Alternate method
+	clrf LATA ; Alternate method
 
-	CLRF PORTC
-	CLRF LATC 
-	MOVLW 0xCF
-	MOVWF TRISC
+	clrf  LATC 
+	movlw 0xCF
+	movwf TRISC
 
 
 ; to clear output
 ; data latches
-	MOVLW  0xE0 ; Configure I/O
-	MOVWF  ANSEL ; for digital inputs 
+	movlw 0xE0 ; Configure I/O
+	movwf ANSEL ; for digital inputs 
 
-	CLRF   TRISA ; Set port A as outputs
+	clrf   TRISA ; Set port A as outputs
 
-;	USART config
-   	MOVLW  0x19   ; 0x19=decimal 25 for 9600 baud given 16MHz Fosc
-	MOVWF  SPBRG 
-	BCF    TXSTA,BRGH
-	BCF    BAUDCON,BRGH
+   	movlw  0x19   ; 0x19=decimal 25 for 9600 baud given 16MHz Fosc
+	movwf  SPBRG 
+	bcf    TXSTA,BRGH
+	bcf    BAUDCON,BRGH
 
 
 	bsf    TRISC, TX     
@@ -210,11 +189,7 @@ Main:
 
     bsf    RCSTA, CREN
 
-
 	bsf    TXSTA, TXEN   ; transmit enable	
-
-;	MOVLW 0x19
-;	MOVWF TXREG
 
 ; enable interrupts
 	bsf INTCON, TMR0IE  ; enable timer0 interrupt
@@ -223,30 +198,27 @@ Main:
 	bsf IPR1, RCIP      ; set recieve priority to high
 	bsf INTCON, GIE     ; global interrupt enable
 
-
 prompt:
-
-	call prompt_r
+	call prompt_r  ; paint the user prompt to the serial terminal
 
 loop:
-
-	btfss rxflag,0x01
+	btfss rxflag,0x01 ; wait on a received command byte
 	goto loop
 	bcf rxflag,0x01
 
-	MOVLW 0x04
-	MOVWF PORTA         ; toggling our test pins
-	CLRF PORTA
-
+	; echo the command
 	movf  rxdata,W
 echo:
-	BTFSS TXSTA,TRMT
-	goto echo
-	MOVWF TXREG
+	btfss TXSTA,TRMT
+	goto  echo
+	movwf TXREG
 
+	movlw 0x04
+	movwf PORTA         ; toggling our test pins
+	clrf  PORTA
 
 	goto prompt
 ;******************************************************************************
 ;End of program
 
-		END
+end
