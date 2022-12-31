@@ -31,17 +31,14 @@
 ;Microchip has changed the format for defining the configuration bits, please 
 ;see the .inc file for futher details on notation.  Below are a few examples.
 
+	CONFIG	FOSC  = HS    ; high-speed occillator   
+	CONFIG  FCMEN = OFF   ; failsafe clock monitior disabled
+	CONFIG  IESO  = OFF   ; oscilator switchover mode disabled
+	CONFIG  PWRT  = ON    ; power-up timer enable
+	CONFIG  BOREN = OFF   ; brown-out reset disabled
+	CONFIG  WDTEN = OFF   ; watchdog timer enable controlled by SWDTEN in WDTCON
+	CONFIG  MCLRE = ON    ; MCLRE pin enabled (master clear reset pin)
 
-
-;   Oscillator Selection:
-    CONFIG	FOSC  = HS   
-	CONFIG  FCMEN  = OFF
-	CONFIG  IESO  = OFF  
-	CONFIG  PWRT  = ON
-	CONFIG  BOREN = OFF
-
-	CONFIG  WDTEN = OFF
-	CONFIG  MCLRE = ON
 	CONFIG  DEBUG = OFF
 ;	CONFIG  LVP   = ON       
 
@@ -58,7 +55,8 @@
 		ENDC
 
 		CBLOCK	0x000
-		EXAMPLE		;example of a variable in access RAM
+		rxdata
+		rxflag
 		ENDC
 
 ;******************************************************************************
@@ -75,9 +73,7 @@
 
 		ORG	0x0000
 		
-		rxdata EQU 0x00
-		rxtest EQU 0x01
-		rxflag EQU 0x00
+;		rxflag EQU 0x00
 
 goto	Main		;go to start of main code
 
@@ -148,10 +144,12 @@ rxisr:
 	
 
 	movf RCREG,W
+	movwf rxdata
+	movlw 0x00
+	movf  rxdata,W
 	BTFSC TXSTA,TRMT
 	MOVWF TXREG
 
-	movwf EXAMPLE
 	bsf  rxflag,0x01
 
 
