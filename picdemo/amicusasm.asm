@@ -146,9 +146,6 @@ rxisr:
 	movf RCREG,W
 	movwf rxdata
 	movlw 0x00
-	movf  rxdata,W
-	BTFSC TXSTA,TRMT
-	MOVWF TXREG
 
 	bsf  rxflag,0x01
 
@@ -274,6 +271,12 @@ loop:
 ;	MOVLW 0x35
 ;	MOVWF EXAMPLE	
 ;	MOVF EXAMPLE,0
+
+	movf  rxdata,W
+echo:
+	BTFSS TXSTA,TRMT
+	goto echo
+	MOVWF TXREG
 
 
 	goto prompt
