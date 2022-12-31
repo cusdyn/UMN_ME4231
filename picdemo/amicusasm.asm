@@ -26,6 +26,7 @@
 	LIST P=18F2520		;directive to define processor
 	#include <P18F25K20.INC>	;processor specific variable definitions
 
+	EXTERN prompt_r
 ;******************************************************************************
 ;Configuration bits
 ;Microchip has changed the format for defining the configuration bits, please 
@@ -48,30 +49,26 @@
 ; More variables may be needed to store other special function registers used
 ; in the interrupt routines.
 
-		CBLOCK	0x080
-		WREG_TEMP	;variable used for context saving 
-		STATUS_TEMP	;variable used for context saving
-		BSR_TEMP	;variable used for context saving
-		ENDC
-
-		CBLOCK	0x000
-		rxdata
-		rxflag
-		ENDC
+	udata
+	rxdata res 1
+	rxflag res 1
+	WREG_TEMP res 1	  ;variable used for context saving 
+	STATUS_TEMP	res 1 ;variable used for context saving
+	BSR_TEMP res 1	  ;variable used for context saving
 
 ;******************************************************************************
 ;EEPROM data
 ; Data to be programmed into the Data EEPROM is defined here
 
-		ORG	0xf00000
+;	ORG	0xf00000
 
-		DE	"Test Data",0,1,2,3,4,5
+;	DE	"Test Data",0,1,2,3,4,5
 
 ;******************************************************************************
 ;Reset vector
 ; This code will start executing when a reset occurs.
 
-		ORG	0x0000
+	ORG	0x0000
 		
 ;		rxflag EQU 0x00
 
@@ -157,8 +154,6 @@ rxisr:
 isrexit:
 
 
-
-
 	retfie	FAST
 
 ;******************************************************************************
@@ -230,47 +225,18 @@ Main:
 
 
 prompt:
-cret:
-	MOVLW 0x0D
-	BTFSS TXSTA,TRMT
-	goto cret
-	MOVWF TXREG
-lfeed:
-	MOVLW 0x0A
-	BTFSS TXSTA,TRMT
-	goto lfeed
-	MOVWF TXREG
-psym:
-	MOVLW 0x3E
-	BTFSS TXSTA,TRMT
-	goto psym
-	MOVWF TXREG
 
+	call prompt_r
 
 loop:
 
-
-;	MOVLW 0x35
-;	BTFSC TXSTA,TRMT
-;	MOVWF TXREG
-;	btfss RCSTA, OERR  ; check for overrun
-;	goto toggle
-;	bcf  RCSTA, CREN  ; clear overrun
-;	movlw 0x04
-;	MOVWF PORTA         ; toggling our test pins
-;	CLRF PORTA
 	btfss rxflag,0x01
 	goto loop
+	bcf rxflag,0x01
 
 	MOVLW 0x04
 	MOVWF PORTA         ; toggling our test pins
 	CLRF PORTA
-
-	bcf rxflag,0x01
-
-;	MOVLW 0x35
-;	MOVWF EXAMPLE	
-;	MOVF EXAMPLE,0
 
 	movf  rxdata,W
 echo:
