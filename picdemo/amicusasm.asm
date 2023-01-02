@@ -42,6 +42,7 @@ CONFIG  BOREN = OFF   ; brown-out reset disabled
 CONFIG  WDTEN = OFF   ; watchdog timer enable controlled by SWDTEN in WDTCON
 CONFIG  MCLRE = ON    ; MCLRE pin enabled (master clear reset pin)
 CONFIG  DEBUG = OFF
+; CONFIG  CCP2MX = ON
 ;CONFIG  LVP   = ON       
 
 ;******************************************************************************
@@ -133,13 +134,11 @@ rxisr:
 	movwf PORTA         ; toggling our test pins
 	clrf  PORTA
 	
-
 	movf RCREG,W
 	movwf rxdata
 	movlw 0x00
 
 	bsf  rxflag,0x01
-
 isrexit:
 	retfie	FAST
 
@@ -148,7 +147,6 @@ isrexit:
 ; The main program code is placed here.
 
 Main:
-
 	;	clock config
 	bsf OSCCON,IRCF0
 	bsf OSCCON,IRCF1
@@ -162,12 +160,27 @@ Main:
 	clrf LATA ; Alternate method
 
 	clrf  LATC 
-	movlw 0xCF
-	movwf TRISC
+	clrf TRISC  ; port C as outputs. USART config will handle the RX/TX pins.
+
+	; PWM configuration
+	bsf   TRISC,1  ; disable PWM output
+	movlw 0xff
+	movwf PR2       ; set PWM period
+	bsf   CCP2CON,CCP2M3
+	bsf   CCP2CON,CCP2M2
+	clrf  CCPR2H    ; PWM high byte
+	movlw 0xf5
+	movwf CCPR2L    ; PWM low byte
+	bcf   PIR1,TMR2IF
+	clrf  T2CON
+	bsf   T2CON,TMR2ON
+pwmstart:
+	btfsc PIR1,TMR2IF
+	goto pwmstart
+	bcf TRISC,1  ; set as output
 
 
-; to clear output
-; data latches
+
 	movlw 0xE0 ; Configure I/O
 	movwf ANSEL ; for digital inputs 
 
@@ -212,10 +225,9 @@ echo:
 	btfss TXSTA,TRMT
 	goto  echo
 	movwf TXREG
-
-	movlw 0x04
-	movwf PORTA         ; toggling our test pins
-	clrf  PORTA
+	
+	movf  rxdata,W
+	call cmd_proc_r
 
 	goto prompt
 ;******************************************************************************
