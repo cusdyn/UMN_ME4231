@@ -57,7 +57,10 @@ udata
 	WREG_TEMP res 1	  ;variable used for context saving 
 	STATUS_TEMP	res 1 ;variable used for context saving
 	BSR_TEMP res 1	  ;variable used for context saving
-
+	adch res 1
+	adcl res 1
+	mode  res 1
+ 	
 ;******************************************************************************
 ;EEPROM data
 ; Data to be programmed into the Data EEPROM is defined here
@@ -112,9 +115,9 @@ HighInt:
 	btfss INTCON,TMR0IF ; TIMER0 flag check. skip next instruction if clear
     goto rxisr
 
-	movlw 0x01
+	movlw 0x20
 	movwf PORTA         ; toggling our test pins
-	clrf PORTA
+	clrf  PORTA	
 
 	bcf   INTCON,TMR0IF ; clear the flag
 	
@@ -122,17 +125,6 @@ rxisr:
 	; USART receive interrupt
 	btfss PIR1,RCIF     ; check for receive interrupt
 	goto isrexit
-
-	movlw 0x02
-	movwf PORTA         ; toggling our test pins
-	clrf  PORTA
-
-	; check for framing error
-	
-	movlw 0x08
-	btfsc RCSTA,FERR
-	movwf PORTA         ; toggling our test pins
-	clrf  PORTA
 	
 	movf RCREG,W
 	movwf rxdata
@@ -147,6 +139,8 @@ isrexit:
 ; The main program code is placed here.
 
 Main:
+	clrf mode         ; initialize to manyual duty cycle control
+
 	;	clock config
 	bsf OSCCON,IRCF0
 	bsf OSCCON,IRCF1
@@ -157,9 +151,8 @@ Main:
 	bcf T0CON,T0CS    ; clock source internal
 	bsf T0CON,PSA     ; disable prescaler
 
-	clrf LATA ; Alternate method
-
-	clrf  LATC 
+	clrf LATA
+	clrf LATC 
 	clrf TRISC  ; port C as outputs. USART config will handle the RX/TX pins.
 
 	; PWM configuration
@@ -179,30 +172,25 @@ pwmstart:
 	goto pwmstart
 	bcf TRISC,1  ; set as output
 
-
-
-	movlw 0xE0 ; Configure I/O
+	movlw 0x01 ; Configure I/O
 	movwf ANSEL ; for digital inputs 
+	movlw 0x01
+	movwf TRISA ; Set port A as outputs except PA0
 
-	clrf   TRISA ; Set port A as outputs
-
+	; USART config
    	movlw  0x19   ; 0x19=decimal 25 for 9600 baud given 16MHz Fosc
 	movwf  SPBRG 
 	bcf    TXSTA,BRGH
 	bcf    BAUDCON,BRGH
-
-
 	bsf    TRISC, TX     
 	bsf    TRISC, RX
  	bsf    RCSTA, SPEN
 	bsf    TXSTA, SPEN   ; automatically configures for output
-    
 	bcf    TXSTA, SYNC   ; asyncronous
 	bcf    RCSTA, SYNC	
-
     bsf    RCSTA, CREN
-
 	bsf    TXSTA, TXEN   ; transmit enable	
+
 
 ; enable interrupts
 	bsf INTCON, TMR0IE  ; enable timer0 interrupt
@@ -215,6 +203,42 @@ prompt:
 	call prompt_r  ; paint the user prompt to the serial terminal
 
 loop:
+
+	;This code block configures the ADC
+	;for polling, Vdd and Vss as reference, Frc
+	;clock and AN0 input.
+	;
+	;Conversion start & polling for completion
+	; are included.
+	;
+	btfss mode,0
+	goto cont
+	MOVLW 0b10101111 ;right justify, Frc,
+	MOVWF ADCON2 ; & 12 TAD ACQ time
+	MOVLW 0b00000000 ;ADC ref = Vdd,Vss
+	MOVWF ADCON1 ;
+	BSF TRISA,0 ;Set RA0 to input
+	BSF ANSEL,0 ;Set RA0 to analog
+	MOVLW 0b00000001 ;AN0, ADC on
+	MOVWF ADCON0 ;
+	BSF ADCON0,GO ;Start conversion
+	ADCPoll:
+	BTFSC ADCON0,GO ;Is conversion done?
+	BRA ADCPoll ;No, test again
+	; Result is complete - store 2 MSbits in
+	; RESULTHI and 8 LSbits in RESULTLO
+	MOVFF ADRESH,adch
+	MOVFF ADRESL,adcl
+
+	; drive PWM out off of A2D sample
+	movff adch,CCPR2L 
+
+	rrncf adcl,1
+	rrncf adcl,1
+	movf  adcl,W
+	iorwf CCP2CON,1    ; PWM duty cycle least signignificant bits
+
+cont:
 	btfss rxflag,0x01 ; wait on a received command byte
 	goto loop
 	bcf rxflag,0x01
@@ -228,6 +252,7 @@ echo:
 	
 	movf  rxdata,W
 	call cmd_proc_r
+	movwf mode
 
 	goto prompt
 ;******************************************************************************

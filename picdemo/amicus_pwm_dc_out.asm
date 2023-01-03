@@ -17,62 +17,61 @@
 
 #include    <P18F25K20.INC>   ; any baseline device will do
 
-#define ZERO   0x30   ; characters '1' through '9' control DC output
-#define DCINC 0x71   ; duty cycle increment from '1' to '9' 
-
-GLOBAL  cmd_proc_r
-EXTERN pwm_dc_out_r
+GLOBAL      pwm_dc_out_r
 
 
 ;***** VARIABLE DEFINITIONS
         UDATA
-cmd   res 1
-cval  res 1
-newval res 1
-cnt  res 1
-
+ccprlh res 1
+ccprll res 1
 ;***** SUBROUTINES ******************************************************
         CODE
 
-cmd_proc_r
-	movwf cmd  ; hold command
 
-	movlw 0x61  ; 'a'
-	subwf cmd,W 
-	btfsc STATUS,Z
-	retlw   1       ; return in mode=1 ADC controlling duty cycle
-	
+pwm_dc_out_r
+	; we assume an immediately preceeding multiply has a 16-bit
+    ; result in PRODH:PRODL from which we will map to the 10-bit 
+	; duty cycle
 
-	movlw 0x00   
-	movwf cnt
-	movlw ZERO
-	movwf cval
-  checkval:
-	movf  cmd,W
-	subwf cval,W 
-	btfss STATUS,Z
-	goto  next
-	movlw DCINC
-	mulwf cnt    ; multiply low PWM by loop counter. 16 bit result
+	movf  PRODH,W  ; 2 MSBs of 10-bit DC are in the PRODH register
+	movwf ccprlh;  seed the high duty cycle byte
+	movlw 0x03;    ; mask result
+	andwf ccprlh,1;
 
-	; pwm_dc_out expects desired 10-bit PWM to be in PRODH:PRODL
-	call pwm_dc_out_r
+	rlncf ccprlh,1
+	rlncf ccprlh,1
+	rlncf ccprlh,1
+	rlncf ccprlh,1
+	rlncf ccprlh,1
+	rlncf ccprlh,1
 
-	goto  done
-  next:
-	movf  cval,w
-	addlw 0x01
-	movwf cval
-	movf  cnt,w
-	addlw 0x01
-	movwf cnt
-	goto  checkval
-  done:
+	movf  PRODL,W
+	movwf ccprll;  seed the low duty cycle byte
+	movlw 0xFC;    
+	andwf ccprll,1 ; mask LSBs
+	rrncf ccprll,1 ; rotate right
+	rrncf ccprll,1
 
- 	movlw 0x04
-	movwf PORTA         ; toggling our test pins
-	clrf  PORTA
+	movf ccprll,W
+	iorwf  ccprlh,1  ; finalize ccprlh: what is written to CCP2RL
+
+	; now get the two LSBs 
+	movf  PRODL,W
+	movwf ccprll;  seed the low duty cycle byte again
+	movlw 0x03;    
+	andwf ccprll,1 ; mask LSBs
+
+	; command
+	movf ccprlh,W
+	movwf CCPR2L    ; PWM duty cycle most signignificant bits
+
+	movf ccprll,W
+	rlncf ccprll,1
+	rlncf ccprll,1
+	rlncf ccprll,1
+	rlncf ccprll,1
+	movf  ccprll,W
+	iorwf CCP2CON,1    ; PWM duty cycle least signignificant bits
 
 	retlw   0
-
 END
