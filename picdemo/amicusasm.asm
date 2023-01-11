@@ -60,18 +60,21 @@ udata
 	adch res 1
 	adcl res 1
 	mode  res 1
- 	
+	ref   res 1
+	gain  res 1
+ 	dcout res 0
 ;******************************************************************************
 ;EEPROM data
 ; Data to be programmed into the Data EEPROM is defined here
 ;	ORG	0xf00000
 ;	DE	"Test Data",0,1,2,3,4,5
-
+	
 ;******************************************************************************
 ;Reset vector
 ; This code will start executing when a reset occurs.
 
 ORG	0x0000
+
 goto	Main		;go to start of main code
 
 ;******************************************************************************
@@ -202,6 +205,11 @@ pwmstart:
 prompt:
 	call prompt_r  ; paint the user prompt to the serial terminal
 
+	movlw 0xC0
+	movwf  ref
+	movlw 0x08
+	movwf gain
+
 loop:
 
 	;This code block configures the ADC
@@ -213,7 +221,7 @@ loop:
 	;
 	btfss mode,0
 	goto cont
-	MOVLW 0b10101111 ;right justify, Frc,
+	MOVLW 0b00101111 ;left justify, Frc,
 	MOVWF ADCON2 ; & 12 TAD ACQ time
 	MOVLW 0b00000000 ;ADC ref = Vdd,Vss
 	MOVWF ADCON1 ;
@@ -230,13 +238,30 @@ loop:
 	MOVFF ADRESH,adch
 	MOVFF ADRESL,adcl
 
-	; drive PWM out off of A2D sample
-	movff adch,CCPR2L 
+	clrf dcout   ; assume zero duty cycle out
+	movf  adch,W
+	subwf ref,0
+	btfsc STATUS,N
+	goto  dutyout  ; hotter than ref so no output
+	btfsc STATUS,Z
+	goto  dutyout  ; same as ref so no output
+	
+	mulwf  gain          ; result in PRODHI and PRODLO
+	movff  PRODL,dcout  ; our dcout
+	movlw 0x00
+	CPFSEQ PRODH   ; check our multiply didn't pass 8 bits
+	setf   dcout    ; maximize DC out
 
-	rrncf adcl,1
-	rrncf adcl,1
-	movf  adcl,W
-	iorwf CCP2CON,1    ; PWM duty cycle least signignificant bits
+;	rrncf adcl,1
+;	rrncf adcl,1
+;	movf  adcl,W
+;	iorwf CCP2CON,1    ; PWM duty cycle least signignificant bits
+	bcf CCP2CON,DC2B1
+	bcf CCP2CON,DC2B0
+
+dutyout:
+	; drive PWM out off of A2D sample
+	movff dcout,CCPR2L 
 
 cont:
 	btfss rxflag,0x01 ; wait on a received command byte
